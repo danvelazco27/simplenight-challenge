@@ -1,0 +1,8 @@
+node_modules/
+playwright-report/
+test-results/
+.playwright/
+.playwright-cli/
+.blob-report/
+.claude/
+coverage/
