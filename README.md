@@ -191,8 +191,6 @@ Runs on: `push` to main/master, `pull_request`, `workflow_dispatch`
 
    > **Note:** This job currently fails in GitHub Actions with `HTTP/2 403` from CloudFront (`x-cache: Error from cloudfront`). The staging URL blocks requests originating from GitHub Actions IP ranges (AWS). This is an infrastructure restriction, not a test framework issue. Tests run successfully locally and in Docker where the staging environment is accessible.
 
-
-
 3. **E2E Tests** (depends on 1 & 2)
    - Setup Node.js 20
    - Install dependencies (npm cache)

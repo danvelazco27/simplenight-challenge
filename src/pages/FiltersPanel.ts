@@ -101,7 +101,8 @@ export class FiltersPanel {
     }
 
     let attempts = 0;
-    const maxAttempts = 150; // Need up to 150 to go from 0 to 1000
+    const distance = Math.abs(clampedTarget - currentValue);
+    const maxAttempts = distance + 50; // exact moves needed based on distance + safety buffer
 
     while (currentValue !== clampedTarget && attempts < maxAttempts) {
       const diff = clampedTarget - currentValue;
