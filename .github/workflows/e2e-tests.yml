@@ -35,8 +35,8 @@ jobs:
       - name: Verify Simplenight staging is accessible
         run: |
           echo "Checking https://wl.stg.simplenight.com/ from CI runner..."
-          curl -I -L --max-redirs 5 --connect-timeout 10 https://wl.stg.simplenight.com/ || true
-          echo "Access check completed"
+          curl -I -L --max-redirs 5 --connect-timeout 10 --fail https://wl.stg.simplenight.com/
+          echo "✅ Staging access verified"
 
   e2e-tests:
     name: E2E Tests (Playwright)
