@@ -42,8 +42,11 @@ export class SearchResultsPage {
   }
 
   async waitForResults(): Promise<void> {
+    // Double verification: wait for spinner to disappear AND results to be visible
     await this.progressBar.waitFor({ state: 'hidden', timeout: 60000 });
     await this.page.waitForLoadState('domcontentloaded');
+    // Wait for at least one hotel article to appear (double-check results are rendered)
+    await this.hotelArticles.first().waitFor({ state: 'visible', timeout: 10000 });
   }
 
   async getHotelCount(): Promise<number> {

@@ -12,7 +12,11 @@
     "test:headed": "npx playwright test --headed",
     "test:ui": "npx playwright test --ui",
     "test:debug": "npx playwright test --debug",
-    "report": "npx playwright show-report"
+    "report": "npx playwright show-report html-report",
+    "docker:build": "docker build -t simplenight-tests:latest .",
+    "docker:test": "docker run --rm -e CI=true -e BASE_URL=https://wl.stg.simplenight.com -v $(pwd)/html-report:/app/html-report -v $(pwd)/junit-report:/app/junit-report -v $(pwd)/test-results:/app/test-results simplenight-tests:latest",
+    "docker:test:headed": "docker run --rm -it -e CI=true -e BASE_URL=https://wl.stg.simplenight.com simplenight-tests:latest npm run test:headed",
+    "docker:clean": "docker rmi simplenight-tests:latest"
   },
   "lint-staged": {
     "*.ts": [

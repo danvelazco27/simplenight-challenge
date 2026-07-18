@@ -25,3 +25,6 @@ Thumbs.db
 # Reports
 /junit-report/
 /html-report/
+
+# Logs
+*.log

@@ -1,39 +1,104 @@
-import { test, expect } from '@playwright/test';
-import { App } from '../src/pages/App';
-import { searchData, filterData } from '../src/data/testData';
+import { test, expect } from './fixtures';
+import { testDataCollection } from '../src/data/testData';
 
-test.describe('Simplenight Hotel Booking Flow', () => {
-  let app: App;
+test.describe('Simplenight Hotel Booking Flow - Data-Driven Testing', () => {
+  /**
+   * Parametrized test using DDT (Data-Driven Testing)
+   * Each dataset (search location + filters) is run as a separate test instance
+   * Demonstrates test scalability and reusability with different parameters
+   */
+  testDataCollection.forEach((testData) => {
+    test(`should complete full hotel booking search: ${testData.scenario}`, async ({
+      page,
+      app,
+      logger,
+    }) => {
+      test.setTimeout(120000);
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
-    app = new App(page);
-  });
+      // Step 1: Navigate to staging homepage
+      await test.step('Navigate to staging homepage', async () => {
+        logger.info('Navigating to Simplenight staging homepage');
+        await page.goto('/', { waitUntil: 'domcontentloaded' });
+        await expect(page).toHaveTitle(/simplenight/i);
+        logger.debug('Homepage title verified');
+      });
 
-  test('should complete full hotel booking search and validate results', async ({ page }) => {
-    test.setTimeout(120000);
-    // Step 1: Go to staging homepage
-    await expect(page).toHaveTitle(/simplenight/i);
+      // Step 2: Select Hotels category
+      await test.step('Select Hotels category from navbar', async () => {
+        logger.info('Selecting Hotels category');
+        await app.nav.clickHotels();
+        logger.debug('Hotels category clicked');
+      });
 
-    // Step 2: Select Hotels category
-    await app.nav.clickHotels();
+      // Step 3: Perform search with provided dataset
+      await test.step(`Search for hotels in ${testData.search.location}`, async () => {
+        logger.info('Performing hotel search', {
+          location: testData.search.location,
+          checkIn: testData.search.checkIn,
+          checkOut: testData.search.checkOut,
+          adults: testData.search.guests.adults,
+          children: testData.search.guests.children,
+        });
+        await app.search.searchHotels(testData.search);
+        logger.debug('Search completed');
+      });
 
-    // Step 3: Search with Miami, Aug 1-3, 1 Adult + 1 Child
-    await app.search.searchHotels(searchData);
+      // Step 4: Switch to Map view
+      await test.step('Switch to Map view', async () => {
+        logger.info('Switching to Map view for results');
+        await app.results.switchToMapView();
+        logger.debug('Map view activated');
+      });
 
-    // Step 4: Select Map view
-    await app.results.switchToMapView();
+      // Step 5: Apply filters
+      await test.step('Apply filters: Price Range and Guest Score', async () => {
+        logger.info('Applying filters', {
+          priceMin: testData.filter.priceRange.min,
+          priceMax: testData.filter.priceRange.max,
+          guestScoreLabel: testData.filter.guestScore.label,
+          guestScoreMinValue: testData.filter.guestScore.minValue,
+        });
+        await app.filters.applyFilters(testData.filter);
+        logger.debug('Filters applied successfully');
+      });
 
-    // Step 5: Filter by Price Range (100-1000+) and Guest Score ("Very Good")
-    await app.filters.applyFilters(filterData);
+      // Step 6: Zoom and select hotel from map
+      await test.step('Zoom in on map and select hotel', async () => {
+        logger.info('Zooming into map');
+        await app.results.zoomIntoMap();
+        logger.debug('Map zoomed, now selecting hotel');
+        await app.results.selectHotelFromMap();
+        logger.debug('Hotel selected from map');
+      });
 
-    // Step 6: Zoom in on map and select 1 hotel
-    await app.results.zoomIntoMap();
-    await app.results.selectHotelFromMap();
+      // Step 7: Validate hotel card details
+      await test.step('Validate hotel card Price and Guest Score', async () => {
+        logger.info('Waiting for hotel card visibility');
+        await app.hotelCard.waitForCardVisible();
+        logger.debug('Hotel card is visible');
 
-    // Step 7: Validate Price and Guest Score on the hotel card
-    await app.hotelCard.waitForCardVisible();
-    await app.hotelCard.verifyPriceInRange(filterData.priceRange.min, filterData.priceRange.max);
-    await app.hotelCard.verifyGuestScoreAtLeast(filterData.guestScore.minValue);
+        logger.info('Verifying price is within range', {
+          min: testData.filter.priceRange.min,
+          max: testData.filter.priceRange.max,
+        });
+        await app.hotelCard.verifyPriceInRange(
+          testData.filter.priceRange.min,
+          testData.filter.priceRange.max,
+        );
+        logger.debug('Price validation passed');
+
+        logger.info('Verifying guest score meets minimum threshold', {
+          minScore: testData.filter.guestScore.minValue,
+        });
+        await app.hotelCard.verifyGuestScoreAtLeast(testData.filter.guestScore.minValue);
+        logger.debug('Guest score validation passed');
+      });
+
+      // Log final test summary
+      await test.step('Test summary', async () => {
+        const summary = logger.getSummary();
+        logger.info('Test completed successfully', summary);
+      });
+    });
   });
 });

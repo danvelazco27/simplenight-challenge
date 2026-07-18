@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.prettierignore
+.github
+README.md
+03_Lead-QA-Take-Home-Assignment.*
+html-report
+junit-report
+test-results
+.env
+.env.local
+.playwright-cli
+.claude
+*.log

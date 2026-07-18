@@ -22,11 +22,48 @@ export class FiltersPanel {
 
   async setPriceRange(min: number, max?: number): Promise<void> {
     await this.priceRangeSection.scrollIntoViewIfNeeded();
-    await this.setSliderValue(this.minPriceSlider, min);
 
-    // 1000+ behaves as an open-ended cap, so moving max to its highest value is valid.
+    // Reset filters to default state first (this sets min to 0, max to 1000)
+    await this.resetButtons.first().click();
+    // eslint-disable-next-line playwright/no-wait-for-timeout
+    await this.page.waitForTimeout(200);
+    console.log(`🔄 Filters reset to defaults`);
+
+    // Verify both range values after reset
+    let currentMin = parseInt((await this.minPriceSlider.getAttribute('aria-valuenow')) ?? '0', 10);
+    let currentMax = parseInt(
+      (await this.maxPriceSlider.getAttribute('aria-valuenow')) ?? '1000',
+      10,
+    );
+    console.log(`📊 After reset - Min: ${currentMin}, Max: ${currentMax}`);
+
+    // Only move minimum if it's not at target
+    if (currentMin !== min) {
+      console.log(`🎚️ Moving min from ${currentMin} to ${min}`);
+      await this.setSliderValue(this.minPriceSlider, min);
+      currentMin = parseInt((await this.minPriceSlider.getAttribute('aria-valuenow')) ?? '0', 10);
+      console.log(`✅ Min price final: ${currentMin}`);
+    } else {
+      console.log(`✨ Min price already at target: ${min}`);
+    }
+
+    // Verify max is at target (usually shouldn't need to move after reset)
     if (typeof max === 'number') {
-      await this.setSliderValue(this.maxPriceSlider, max);
+      currentMax = parseInt(
+        (await this.maxPriceSlider.getAttribute('aria-valuenow')) ?? '1000',
+        10,
+      );
+      console.log(`📊 Max price verified: ${currentMax} (target: ${max})`);
+
+      if (currentMax !== max) {
+        console.log(`🎚️ Moving max from ${currentMax} to ${max}`);
+        await this.setSliderValue(this.maxPriceSlider, max);
+        currentMax = parseInt(
+          (await this.maxPriceSlider.getAttribute('aria-valuenow')) ?? '1000',
+          10,
+        );
+        console.log(`✅ Max price final: ${currentMax}`);
+      }
     }
 
     await this.page.waitForLoadState('domcontentloaded');
@@ -45,18 +82,55 @@ export class FiltersPanel {
 
   private async setSliderValue(slider: Locator, targetValue: number): Promise<void> {
     await slider.focus();
+    // eslint-disable-next-line playwright/no-wait-for-timeout
+    await this.page.waitForTimeout(100);
 
-    const currentValue = parseInt((await slider.getAttribute('aria-valuenow')) ?? '0', 10);
     const minValue = parseInt((await slider.getAttribute('aria-valuemin')) ?? '0', 10);
     const maxValue = parseInt((await slider.getAttribute('aria-valuemax')) ?? '1000', 10);
     const clampedTarget = Math.min(Math.max(targetValue, minValue), maxValue);
 
-    // Sliders in this app move in 100-unit increments.
-    const stepsNeeded = Math.round((clampedTarget - currentValue) / 100);
-    const key = stepsNeeded >= 0 ? 'ArrowRight' : 'ArrowLeft';
+    let currentValue = parseInt((await slider.getAttribute('aria-valuenow')) ?? '0', 10);
+    console.log(
+      `🎚️ Slider: current=${currentValue}, target=${clampedTarget}, min=${minValue}, max=${maxValue}`,
+    );
 
-    for (let i = 0; i < Math.abs(stepsNeeded); i++) {
-      await slider.press(key);
+    // If already at target, do nothing
+    if (currentValue === clampedTarget) {
+      console.log(`✨ Slider already at target value: ${currentValue}`);
+      return;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 150; // Need up to 150 to go from 0 to 1000
+
+    while (currentValue !== clampedTarget && attempts < maxAttempts) {
+      const diff = clampedTarget - currentValue;
+      const direction = diff > 0 ? 'ArrowRight' : 'ArrowLeft';
+
+      // Press one step at a time and check
+      await slider.press(direction);
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await this.page.waitForTimeout(100);
+
+      const prevValue = currentValue;
+      currentValue = parseInt((await slider.getAttribute('aria-valuenow')) ?? '0', 10);
+
+      // Log every 10 attempts to avoid spam
+      if (attempts % 10 === 0) {
+        console.log(
+          `🎚️ Att ${attempts}: ${prevValue} → ${currentValue} (target: ${clampedTarget})`,
+        );
+      }
+
+      attempts++;
+    }
+
+    if (currentValue === clampedTarget) {
+      console.log(`✅ Slider reached exact target: ${currentValue}`);
+    } else {
+      console.log(
+        `⚠️ Slider stopped at: ${currentValue} (target was: ${clampedTarget}, attempts: ${attempts})`,
+      );
     }
   }
 
